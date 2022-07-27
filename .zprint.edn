@@ -1,0 +1,17 @@
+{:style   [:respect-nl
+           :justified
+           :how-to-ns]
+
+ ;; Unset "indent with 2 chars" as it creates fights with parinfer
+ :binding {:indent 0}
+ :map     {:comma? false
+           :indent 0}
+ :pair    {:indent 0}
+ :fn-map  {"defcard"      :arg1-body
+           "defcard-rg"   :arg1-body
+           "defglobal"    :arg1-body
+           "defstate"     :arg1-body
+           "reg-event-fx" :arg1-body
+           "reg-fx"       :arg1-body
+           "reg-sub"      :arg1-body
+           "testing"      :arg1-body}}

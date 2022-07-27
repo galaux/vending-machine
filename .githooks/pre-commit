@@ -1,0 +1,23 @@
+#!/bin/sh
+
+if [ "$CI" = "true" ]
+then
+  exit 0
+fi
+
+for file in $(git diff --cached --name-only --diff-filter=ACM \
+                env \
+                resources \
+                src \
+                test)
+do
+  if type zprint > /dev/null && test -f ~/.zprint.edn
+  then
+    if [ "x${file##*.}" = "xclj" ]
+    then
+      zprint --formatted-write "${file}"
+      git add "${file}"
+    fi
+  fi
+done
+
