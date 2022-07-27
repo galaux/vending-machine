@@ -1,20 +1,26 @@
 (ns vending-machine.middleware
   (:require
-   [vending-machine.env :refer [defaults]]
-   [vending-machine.config :refer [env]]
-   [ring.middleware.flash :refer [wrap-flash]]
+   [buddy.auth.accessrules :refer [error wrap-access-rules]]
+   [buddy.auth.backends.token :refer [jws-backend]]
+   [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
+   [buddy.core.nonce :refer [random-bytes]]
+   [buddy.sign.jwt :as jwt]
+   [buddy.sign.util :refer [to-timestamp]]
+   [ring.util.response :refer [get-header]]
    [ring.adapter.undertow.middleware.session :refer [wrap-session]]
    [ring.middleware.defaults :refer [site-defaults wrap-defaults]]
-   [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
-   [buddy.auth.accessrules :refer [restrict]]
-   [buddy.auth :refer [authenticated?]]
-   [buddy.auth.backends.token :refer [jwe-backend]]
-   [buddy.sign.jwt :refer [encrypt]]
-   [buddy.core.nonce :refer [random-bytes]]
-   [buddy.sign.util :refer [to-timestamp]])
+   [ring.middleware.flash :refer [wrap-flash]]
+   [vending-machine.env :refer [defaults]])
   (:import
-   [java.util Calendar Date]
-  ))
+   (java.util Base64 Calendar Date)))
+
+(def secret
+  "Secret used for authentication"
+  (random-bytes 32))
+
+(def secret-str
+  "Base64 string version of the secret for convenient testing"
+  (.encodeToString (Base64/getEncoder) secret))
 
 (defn on-error
   [request response]
@@ -22,33 +28,79 @@
    :headers {}
    :body    (str "Access to " (:uri request) " is not authorized")})
 
+(def ^:private any-access (constantly true))
+
+(def ^:private re-token
+  #"^Token (.*)$")
+
+(defn request->token
+  [request]
+  (some->> (get-header request "Authorization")
+           (re-find re-token)
+           second))
+
+(defn- validate-token
+  [request]
+  (when-let [token (request->token request)]
+    (try
+      (jwt/unsign token secret)
+      true
+      (catch Exception _
+        (error "Bad authentication")))))
+
+(defn- authenticated-user
+  [request]
+  (or (validate-token request)
+      (error "Only authenticated users allowed")))
+
+(defn- if-token-then-validate
+  [request]
+  (if (request->token request)
+    (validate-token request)
+    true))
+
+(def ^:private rules
+  [{:pattern        #"^/api/login$"
+    :request-method :post
+    :handler        any-access}
+   {:pattern        #"^/api/user$"
+    :request-method :post
+    :handler        if-token-then-validate}
+   {:pattern        #"^/api/product$"
+    :request-method :get
+    :handler        any-access}
+   ;; Just for the purpose of the interview
+   {:pattern #"^/api/api-docs/.*"
+    :handler any-access}
+   {:pattern #"^/api/swagger.json"
+    :handler any-access}
+   ;; End of "Just for the purpose of the interview"
+   {:pattern #"^/api/.*"
+    :handler authenticated-user}])
+
 (defn wrap-restricted
   [handler]
-  (restrict handler
-            {:handler  authenticated?
-             :on-error on-error}))
-
-(def secret (random-bytes 32))
+  (let [options {:rules rules :on-error on-error}]
+    (wrap-access-rules handler options)))
 
 (def token-backend
-  (jwe-backend {:secret  secret
-                :options {:alg :a256kw
-                          :enc :a128gcm}}))
+  (jws-backend {:secret secret}))
 
 (defn token
-  [username]
-  (let [claims {:user (keyword username)
+  [user]
+  (let [claims {:user (select-keys user #{:id :username :role})
                 :exp  (to-timestamp
                         (.getTime
                           (doto (Calendar/getInstance)
                             (.setTime (Date.))
                             (.add Calendar/HOUR_OF_DAY 1))))}]
-    (encrypt claims secret {:alg :a256kw :enc :a128gcm})))
+    (jwt/sign claims secret)))
 
 (defn wrap-auth
   [handler]
   (let [backend token-backend]
     (-> handler
+        wrap-restricted
         (wrap-authentication backend)
         (wrap-authorization backend))))
 

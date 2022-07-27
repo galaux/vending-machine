@@ -20,6 +20,7 @@
                  [luminus-undertow "0.1.14"]
                  [luminus/ring-ttl-session "0.3.3"]
                  [markdown-clj "1.10.8"]
+                 [me.gosimple/nbvcxz "1.5.0"]
                  [metosin/muuntaja "0.6.8"]
                  [metosin/reitit "0.5.15"]
                  [metosin/ring-http-response "0.9.3"]
@@ -28,6 +29,10 @@
                  [org.clojure/clojure "1.11.1"]
                  [org.clojure/tools.cli "1.0.206"]
                  [org.clojure/tools.logging "1.2.4"]
+                 ;; For Spring Security Crypto
+                 [org.slf4j/jcl-over-slf4j "1.8.0-beta4"]
+                 [org.springframework.security/spring-security-crypto "5.3.2.RELEASE"]
+                 [org.bouncycastle/bcpkix-jdk15on "1.65"]
                  [org.webjars.npm/bulma "0.9.3"]
                  [org.webjars.npm/material-icons "1.0.0"]
                  [org.webjars/webjars-locator "0.42"]
@@ -51,13 +56,13 @@
   {:uberjar {:omit-source true
              :aot :all
              :uberjar-name "vending-machine.jar"
-             :source-paths ["env/prod/clj" ]
+             :source-paths ["env/prod/clj"]
              :resource-paths ["env/prod/resources"]}
 
    :dev           [:project/dev :profiles/dev]
    :test          [:project/dev :project/test :profiles/test]
 
-   :project/dev  {:jvm-opts ["-Dconf=dev-config.edn" ]
+   :project/dev  {:jvm-opts ["-Dconf=dev-config.edn"]
                   :dependencies [[org.clojure/tools.namespace "1.2.0"]
                                  [pjstadig/humane-test-output "0.11.0"]
                                  [prone "2021-04-23"]
@@ -67,13 +72,13 @@
                                  [jonase/eastwood "0.3.5"]
                                  [cider/cider-nrepl "0.26.0"]] 
                   
-                  :source-paths ["env/dev/clj" ]
+                  :source-paths ["env/dev/clj"]
                   :resource-paths ["env/dev/resources"]
                   :repl-options {:init-ns user
                                  :timeout 120000}
                   :injections [(require 'pjstadig.humane-test-output)
                                (pjstadig.humane-test-output/activate!)]}
-   :project/test {:jvm-opts ["-Dconf=test-config.edn" ]
-                  :resource-paths ["env/test/resources"] }
+   :project/test {:jvm-opts ["-Dconf=test-config.edn"]
+                  :resource-paths ["env/test/resources"]}
    :profiles/dev {}
    :profiles/test {}})

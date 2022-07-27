@@ -1,12 +1,12 @@
 (ns vending-machine.db.core-test
   (:require
-   [vending-machine.db.core :refer [*db*] :as db]
-   [java-time.pre-java8]
+   [clojure.test :refer [deftest is use-fixtures]]
+   [vending-machine.util :refer [user-role-buyer]]
    [luminus-migrations.core :as migrations]
-   [clojure.test :refer :all]
+   [mount.core :as mount]
    [next.jdbc :as jdbc]
    [vending-machine.config :refer [env]]
-   [mount.core :as mount]))
+   [vending-machine.db.core :as db :refer [*db*]]))
 
 (use-fixtures
   :once
@@ -18,22 +18,20 @@
     (f)))
 
 (deftest test-users
-  (jdbc/with-transaction [t-conn *db* {:rollback-only true}]
-                         (is (= 1
-                                (db/create-user!
-                                  t-conn
-                                  {:id         "1"
-                                   :first_name "Sam"
-                                   :last_name  "Smith"
-                                   :email      "sam.smith@example.com"
-                                   :pass       "pass"}
-                                  {})))
-                         (is (= {:id         "1"
-                                 :first_name "Sam"
-                                 :last_name  "Smith"
-                                 :email      "sam.smith@example.com"
-                                 :pass       "pass"
-                                 :admin      nil
-                                 :last_login nil
-                                 :is_active  nil}
-                                (db/get-user t-conn {:id "1"} {})))))
+  (jdbc/with-transaction
+    [t-conn *db* {:rollback-only true}]
+    (is (= 1
+           (db/create-user!
+             t-conn
+             {:id       "1"
+              :username "Sam"
+              :password "pass"
+              :role     user-role-buyer
+              :deposit  50}
+             {})))
+    (is (= {:id       "1"
+            :username "Sam"
+            :password "pass"
+            :role     user-role-buyer
+            :deposit  50}
+           (db/get-user t-conn {:username "Sam"} {})))))
