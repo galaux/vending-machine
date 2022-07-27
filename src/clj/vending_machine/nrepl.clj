@@ -1,7 +1,7 @@
 (ns vending-machine.nrepl
   (:require
-    [nrepl.server :as nrepl]
-    [clojure.tools.logging :as log]))
+   [nrepl.server :as nrepl]
+   [clojure.tools.logging :as log]))
 
 (defn start
   "Start a network repl for debugging on specified port followed by
@@ -11,17 +11,18 @@
   [{:keys [port bind transport-fn handler ack-port greeting-fn]}]
   (try
     (log/info "starting nREPL server on port" port)
-    (nrepl/start-server :port port
-                        :bind bind
+    (nrepl/start-server :port         port
+                        :bind         bind
                         :transport-fn transport-fn
-                        :handler handler
-                        :ack-port ack-port
-                        :greeting-fn greeting-fn)
+                        :handler      handler
+                        :ack-port     ack-port
+                        :greeting-fn  greeting-fn)
 
     (catch Throwable t
       (log/error t "failed to start nREPL")
       (throw t))))
 
-(defn stop [server]
+(defn stop
+  [server]
   (nrepl/stop-server server)
   (log/info "nREPL server stopped"))
